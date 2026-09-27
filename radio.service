@@ -1,0 +1,16 @@
+[Unit]
+Description=Raspberry Pi Internet Radio
+After=network-online.target sound.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/mpv --idle=yes --no-video --no-terminal --audio-display=no --volume=40 --input-ipc-server=/run/pi-radio/mpv.sock
+Restart=on-failure
+RestartSec=2
+RuntimeDirectory=pi-radio
+RuntimeDirectoryMode=0755
+UMask=0000
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,26 @@
+#!/bin/sh
+
+set -eu
+
+SOCKET=/run/pi-radio/mpv.sock
+VOLUME=${1:-}
+
+case "$VOLUME" in
+    ''|*[!0-9]*)
+        echo "Usage: radio-volume 0-100" >&2
+        exit 1
+        ;;
+esac
+
+if [ "$VOLUME" -gt 100 ]; then
+    echo "Usage: radio-volume 0-100" >&2
+    exit 1
+fi
+
+if [ ! -S "$SOCKET" ]; then
+    echo "Radio service is not ready. Try: sudo systemctl restart radio" >&2
+    exit 1
+fi
+
+printf '{"command":["set_property","volume",%s]}\n' "$VOLUME" \
+    | socat - "UNIX-CONNECT:$SOCKET" >/dev/null

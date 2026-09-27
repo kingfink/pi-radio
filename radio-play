@@ -1,0 +1,14 @@
+#!/bin/sh
+
+set -eu
+
+SOCKET=/run/pi-radio/mpv.sock
+STREAM_URL=https://stream.revma.ihrhls.com/zc7332
+
+if [ ! -S "$SOCKET" ]; then
+    echo "Radio service is not ready. Try: sudo systemctl restart radio" >&2
+    exit 1
+fi
+
+printf '{"command":["loadfile","%s","replace"]}\n' "$STREAM_URL" \
+    | socat - "UNIX-CONNECT:$SOCKET" >/dev/null
