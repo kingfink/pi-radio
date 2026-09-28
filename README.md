@@ -1,8 +1,24 @@
-# Raspberry Pi Internet Radio
+# Headless Internet Radio
 
-A minimal internet radio for Raspberry Pi OS Lite on a Raspberry Pi 4. It plays Radio Woodstock 100.1 WDST through `mpv`, controlled through a local IPC socket with `socat`.
+A minimal command-line controller for a headless internet-radio player. It currently plays one Radio Woodstock 100.1 WDST stream delivered by iHeart, using `mpv` for playback and `socat` to send commands over a local IPC socket.
+
+The Raspberry Pi is the first host because there is one available to put to use, not because the player depends on Pi hardware. The same design can run on another Debian-based Linux machine with systemd and an audio output.
 
 The service starts at boot and waits silently. Playback begins only when you run `radio-play`.
+
+## How it fits together
+
+```text
+Radio Woodstock stream
+          ↓
+mpv playback service
+          ↑
+radio-play / radio-stop / radio-volume
+          ↑
+optional SSH, Tailscale, or web control plane
+```
+
+This is not a general iHeartRadio client yet: it does not search for stations, manage accounts, or resolve arbitrary iHeart URLs. It is a small player and CLI with one stream hard-coded for the initial use case.
 
 ## What is included
 
@@ -15,7 +31,9 @@ There is no Docker, Python, database, web interface, or configuration framework.
 
 ## Install
 
-Start with a Raspberry Pi 4 running Raspberry Pi OS Lite and connected to the internet. Attach your speakers or audio adapter, then run:
+The included installer targets Raspberry Pi OS Lite on a Raspberry Pi 4. It should also work on a Debian-based systemd Linux host with `apt`, an internet connection, and a working audio output.
+
+Attach your speakers or audio adapter, then run:
 
 ```bash
 git clone <your-repository-url> pi-radio
@@ -26,9 +44,13 @@ sudo ./install.sh
 The installer:
 
 1. Installs `mpv` and `socat`.
-2. Copies the three commands to `/usr/local/bin`.
-3. Installs and enables the systemd service.
-4. Restarts the service so rerunning the installer applies updates.
+2. Creates an unprivileged `pi-radio` service account and control group.
+3. Adds the user who invoked `sudo` to the control group.
+4. Copies the three commands to `/usr/local/bin`.
+5. Installs and enables the systemd service.
+6. Restarts the service so rerunning the installer applies updates.
+
+After the first installation, disconnect and reconnect your SSH session so the new group membership takes effect. The control socket is available only to members of the `pi-radio` group.
 
 It is safe to rerun after updating the files:
 
@@ -61,6 +83,12 @@ ssh pi@radio radio-stop
 
 SSH keys make these commands convenient without repeated password prompts.
 
+To authorize another local or SSH user to control the radio, add that user to the control group and have them log in again:
+
+```bash
+sudo usermod --append --groups pi-radio <username>
+```
+
 ## Check the service
 
 ```bash
@@ -73,6 +101,8 @@ Restart it if the control socket is missing:
 ```bash
 sudo systemctl restart radio
 ```
+
+The player runs as the dedicated, unprivileged `pi-radio` user. Its IPC socket is restricted to the `pi-radio` group; it is not a public network endpoint and should not be exposed directly through Tailscale Funnel or another proxy.
 
 ## Troubleshoot audio output
 
@@ -119,6 +149,8 @@ sudo systemctl restart radio
 
 To keep a custom audio-device change across future installer runs, make the same edit in this repository's `radio.service` file before rerunning `install.sh`.
 
-## Later additions
+## Possible control plane
 
-Tailscale remote access, station presets, and a small web interface can be added later without changing the basic player-and-IPC design.
+The three commands are the local control interface. SSH can expose them remotely today. Tailscale can provide private network access later, and a small site or API can sit on top as a friendlier control plane without changing the underlying player.
+
+Other possible additions include station presets and discovery. They are intentionally outside the first version.
