@@ -22,7 +22,7 @@ case "$HOST_OS" in
 esac
 
 usage() {
-    echo "Usage: radio {play|stop|volume 0-100|status}" >&2
+    echo "Usage: radio {play|stop|volume 0-100|status|now}" >&2
     exit 1
 }
 
@@ -53,6 +53,12 @@ request() {
         Linux) printf '%s\n' "$1" | socat -T2 - "UNIX-CONNECT:$SOCKET" ;;
         Darwin) printf '%s\n' "$1" | nc -w 2 -U "$SOCKET" ;;
     esac
+}
+
+json_string_data() {
+    printf '%s\n' "$1" \
+        | sed -n 's/.*"data":[[:space:]]*"\(.*\)"[[:space:]]*,[[:space:]]*"request_id".*/\1/p' \
+        | sed 's/\\"/"/g; s/\\\\/\\/g'
 }
 
 COMMAND=${1:-}
@@ -97,6 +103,22 @@ case "$COMMAND" in
         else
             echo "$STATE"
         fi
+        ;;
+    now)
+        [ "$#" -eq 1 ] || usage
+        require_socket
+        METADATA_RESPONSE=$(request '{"command":["get_property_string","metadata/by-key/icy-title"]}')
+        TITLE=$(json_string_data "$METADATA_RESPONSE")
+
+        if [ -z "$TITLE" ]; then
+            echo "No track metadata available." >&2
+            exit 1
+        fi
+
+        TITLE=$(printf '%s\n' "$TITLE" \
+            | sed 's#[[:space:]]*https\{0,1\}://[^[:space:]]*[[:space:]]*$##' \
+            | sed 's/ - text="\([^"]*\)"$/ — \1/')
+        echo "$TITLE"
         ;;
     *)
         usage

@@ -35,9 +35,10 @@ radio play
 radio volume 40
 radio stop
 radio status
+radio now
 ```
 
-Volume accepts `0` through `100`. The player waits silently after boot until `radio play` is called.
+Volume accepts `0` through `100`. `radio now` prints the current artist and song when the stream provides them. The player waits silently after boot until `radio play` is called.
 
 ## Remote control
 
@@ -46,6 +47,7 @@ Use SSH directly or over Tailscale:
 ```bash
 ssh pi@radio radio play
 ssh pi@radio radio volume 35
+ssh pi@radio radio now
 ssh pi@radio radio stop
 ```
 
