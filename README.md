@@ -1,10 +1,10 @@
 # pi-radio
 
-A tiny CLI for playing Radio Woodstock on a headless Linux machine.
+A tiny CLI for playing Radio Woodstock on a Raspberry Pi, Linux machine, or Mac.
 
-It uses `mpv` for playback and three commands for control. The first host is a Raspberry Pi because I had one available, but nothing here depends on Pi hardware.
+It uses `mpv` for playback. The first host was a Raspberry Pi because I had one available, but nothing here depends on Pi hardware.
 
-## Install
+## Install on Raspberry Pi or Linux
 
 Designed for Raspberry Pi OS Lite. It should also work on Debian-based Linux systems using systemd.
 
@@ -16,24 +16,37 @@ sudo ./install.sh
 
 Reconnect after the first install so your new group membership takes effect. The installer is safe to rerun.
 
+## Install on macOS
+
+Install [Homebrew](https://brew.sh), then run:
+
+```bash
+git clone https://github.com/kingfink/pi-radio.git
+cd pi-radio
+./install-macos.sh
+```
+
+The macOS installer runs the player as a user LaunchAgent. It does not need `sudo`.
+
 ## Use
 
 ```bash
-radio-play
-radio-volume 40
-radio-stop
+radio play
+radio volume 40
+radio stop
+radio status
 ```
 
-Volume accepts `0` through `100`. The player waits silently after boot until `radio-play` is called.
+Volume accepts `0` through `100`. The player waits silently after boot until `radio play` is called.
 
 ## Remote control
 
 Use SSH directly or over Tailscale:
 
 ```bash
-ssh pi@radio radio-play
-ssh pi@radio radio-volume 35
-ssh pi@radio radio-stop
+ssh pi@radio radio play
+ssh pi@radio radio volume 35
+ssh pi@radio radio stop
 ```
 
 ## Troubleshooting
@@ -46,13 +59,19 @@ journalctl -u radio -n 50 --no-pager
 sudo systemctl restart radio
 ```
 
-If sound comes from the wrong output, select the correct device with:
+On macOS:
+
+```bash
+launchctl kickstart -k gui/$(id -u)/com.kingfink.pi-radio
+```
+
+On Raspberry Pi OS, select the audio output with:
 
 ```bash
 sudo raspi-config
 ```
 
-The service runs as an unprivileged `pi-radio` user. Its local control socket is available only to members of the `pi-radio` group.
+On Linux, the service runs as an unprivileged `pi-radio` user and restricts its local control socket to the `pi-radio` group. On macOS, the LaunchAgent and socket run as your user.
 
 This is an unofficial personal project and is not affiliated with Radio Woodstock or iHeart.
 

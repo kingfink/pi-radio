@@ -47,10 +47,9 @@ else
     ADDED_CONTROL_USER=
 fi
 
-echo "Installing radio commands and service..."
-install -m 0755 "$SCRIPT_DIR/radio-play" /usr/local/bin/radio-play
-install -m 0755 "$SCRIPT_DIR/radio-stop" /usr/local/bin/radio-stop
-install -m 0755 "$SCRIPT_DIR/radio-volume" /usr/local/bin/radio-volume
+echo "Installing the radio command and service..."
+install -m 0755 "$SCRIPT_DIR/radio" /usr/local/bin/radio
+rm -f /usr/local/bin/radio-play /usr/local/bin/radio-stop /usr/local/bin/radio-volume
 install -m 0644 "$SCRIPT_DIR/radio.service" /etc/systemd/system/radio.service
 
 systemctl daemon-reload
@@ -61,4 +60,4 @@ echo "Radio installed."
 if [ -n "$ADDED_CONTROL_USER" ]; then
     echo "Reconnect or log in again before running radio commands as $ADDED_CONTROL_USER."
 fi
-echo "Start listening with: radio-play"
+echo "Start listening with: radio play"

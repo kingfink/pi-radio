@@ -1,0 +1,104 @@
+#!/bin/sh
+
+set -eu
+
+STREAM_URL=${PI_RADIO_STREAM_URL:-https://stream.revma.ihrhls.com/zc7332}
+
+HOST_OS=$(uname -s)
+
+case "$HOST_OS" in
+    Linux)
+        SOCKET=${PI_RADIO_SOCKET:-/run/pi-radio/mpv.sock}
+        RESTART_HINT="sudo systemctl restart radio"
+        ;;
+    Darwin)
+        SOCKET=${PI_RADIO_SOCKET:-$HOME/Library/Caches/pi-radio/mpv.sock}
+        RESTART_HINT="launchctl kickstart -k gui/$(id -u)/com.kingfink.pi-radio"
+        ;;
+    *)
+        echo "Unsupported operating system." >&2
+        exit 1
+        ;;
+esac
+
+usage() {
+    echo "Usage: radio {play|stop|volume 0-100|status}" >&2
+    exit 1
+}
+
+require_socket() {
+    if [ ! -S "$SOCKET" ]; then
+        echo "Radio service is not ready. Try: $RESTART_HINT" >&2
+        exit 1
+    fi
+
+    case "$HOST_OS" in
+        Linux)
+            if ! command -v socat >/dev/null 2>&1; then
+                echo "socat is not installed. Rerun the installer." >&2
+                exit 1
+            fi
+            ;;
+        Darwin)
+            if ! command -v nc >/dev/null 2>&1; then
+                echo "nc is not installed." >&2
+                exit 1
+            fi
+            ;;
+    esac
+}
+
+request() {
+    case "$HOST_OS" in
+        Linux) printf '%s\n' "$1" | socat -T2 - "UNIX-CONNECT:$SOCKET" ;;
+        Darwin) printf '%s\n' "$1" | nc -w 2 -U "$SOCKET" ;;
+    esac
+}
+
+COMMAND=${1:-}
+
+case "$COMMAND" in
+    play)
+        [ "$#" -eq 1 ] || usage
+        require_socket
+        request "{\"command\":[\"loadfile\",\"$STREAM_URL\",\"replace\"]}" >/dev/null
+        ;;
+    stop)
+        [ "$#" -eq 1 ] || usage
+        require_socket
+        request '{"command":["stop"]}' >/dev/null
+        ;;
+    volume)
+        [ "$#" -eq 2 ] || usage
+        VOLUME=$2
+        case "$VOLUME" in
+            ''|*[!0-9]*) usage ;;
+        esac
+        [ "$VOLUME" -le 100 ] || usage
+        require_socket
+        request "{\"command\":[\"set_property\",\"volume\",$VOLUME]}" >/dev/null
+        ;;
+    status)
+        [ "$#" -eq 1 ] || usage
+        require_socket
+        IDLE_RESPONSE=$(request '{"command":["get_property","idle-active"]}')
+        VOLUME_RESPONSE=$(request '{"command":["get_property_string","volume"]}')
+        COMPACT_IDLE=$(printf '%s' "$IDLE_RESPONSE" | tr -d '[:space:]')
+        VOLUME=$(printf '%s\n' "$VOLUME_RESPONSE" | sed -n 's/.*"data":[[:space:]]*"\([^"]*\)".*/\1/p' | sed 's/\..*$//')
+
+        case "$COMPACT_IDLE" in
+            *'"data":true'*) STATE=stopped ;;
+            *'"data":false'*) STATE=playing ;;
+            *) STATE=unknown ;;
+        esac
+
+        if [ -n "$VOLUME" ]; then
+            echo "$STATE (volume $VOLUME)"
+        else
+            echo "$STATE"
+        fi
+        ;;
+    *)
+        usage
+        ;;
+esac
