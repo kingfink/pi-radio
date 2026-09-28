@@ -3,7 +3,7 @@
 set -eu
 
 if [ "$(uname -s)" != Darwin ]; then
-    echo "This installer is for macOS. Use ./install.sh on Linux." >&2
+    echo "This installer is for macOS. Use ./install-linux.sh on Linux." >&2
     exit 1
 fi
 

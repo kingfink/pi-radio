@@ -11,7 +11,7 @@ Designed for Raspberry Pi OS Lite. It should also work on Debian-based Linux sys
 ```bash
 git clone https://github.com/kingfink/pi-radio.git
 cd pi-radio
-sudo ./install.sh
+sudo ./install-linux.sh
 ```
 
 Reconnect after the first install so your new group membership takes effect. The installer is safe to rerun.

@@ -3,7 +3,7 @@
 set -eu
 
 if [ "$(id -u)" -ne 0 ]; then
-    echo "Run this installer as root: sudo ./install.sh" >&2
+    echo "Run this installer as root: sudo ./install-linux.sh" >&2
     exit 1
 fi
 
