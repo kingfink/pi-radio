@@ -8,7 +8,7 @@ Type=simple
 User=pi-radio
 Group=pi-radio
 SupplementaryGroups=audio
-ExecStart=/usr/bin/mpv --no-config --idle=yes --no-video --no-terminal --audio-display=no --volume=40 --input-ipc-server=/run/pi-radio/mpv.sock
+ExecStart=/usr/bin/mpv --no-config --idle=yes --no-video --no-terminal --audio-display=no --volume=50 --input-ipc-server=/run/pi-radio/mpv.sock
 Restart=on-failure
 RestartSec=2
 RuntimeDirectory=pi-radio

@@ -8,7 +8,7 @@
     <array>
         <string>/bin/sh</string>
         <string>-c</string>
-        <string>exec /usr/bin/env PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin mpv --no-config --idle=yes --no-video --no-terminal --audio-display=no --volume=40 --input-ipc-server="$HOME/Library/Caches/pi-radio/mpv.sock"</string>
+        <string>exec /usr/bin/env PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin mpv --no-config --idle=yes --no-video --no-terminal --audio-display=no --volume=50 --input-ipc-server="$HOME/Library/Caches/pi-radio/mpv.sock"</string>
     </array>
     <key>KeepAlive</key>
     <true/>

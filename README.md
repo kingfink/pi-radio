@@ -38,7 +38,7 @@ radio status
 radio now
 ```
 
-Volume accepts `0` through `100`. `radio now` prints the current artist and song when the stream provides them. The player waits silently after boot until `radio play` is called.
+Volume starts at `50` and accepts `0` through `100`. `radio now` prints the current artist and song when the stream provides them. The player waits silently after boot until `radio play` is called.
 
 ## Remote control
 
