@@ -2,7 +2,8 @@
 
 set -eu
 
-STREAM_URL=${PI_RADIO_STREAM_URL:-https://stream.revma.ihrhls.com/zc7332}
+WOODSTOCK_HLS_URL=https://stream.revma.ihrhls.com/zc7332/hls.m3u8
+WOODSTOCK_DIRECT_URL=https://stream.revma.ihrhls.com/zc7332
 
 HOST_OS=$(uname -s)
 
@@ -22,8 +23,18 @@ case "$HOST_OS" in
 esac
 
 usage() {
-    echo "Usage: radio {play|stop|volume 0-100|status|now}" >&2
+    echo "Usage: radio {play [station]|stop|status|volume [0-100|up|down]|stations|help}" >&2
     exit 1
+}
+
+help() {
+    echo "Usage:"
+    echo "  radio play [station]"
+    echo "  radio stop"
+    echo "  radio status"
+    echo "  radio volume [0-100|up|down]"
+    echo "  radio stations"
+    echo "  radio help"
 }
 
 require_socket() {
@@ -61,12 +72,48 @@ json_string_data() {
         | sed 's/\\"/"/g; s/\\\\/\\/g'
 }
 
+get_volume() {
+    RESPONSE=$(request '{"command":["get_property_string","volume"]}')
+    json_string_data "$RESPONSE" | sed 's/\..*$//'
+}
+
+now_playing() {
+    TITLE_RESPONSE=$(request '{"command":["get_property_string","metadata/by-key/title"]}')
+    ARTIST_RESPONSE=$(request '{"command":["get_property_string","metadata/by-key/artist"]}')
+    TITLE=$(json_string_data "$TITLE_RESPONSE")
+    ARTIST=$(json_string_data "$ARTIST_RESPONSE")
+
+    if [ -n "$TITLE" ]; then
+        if [ -n "$ARTIST" ]; then
+            echo "$ARTIST — $TITLE"
+        else
+            echo "$TITLE"
+        fi
+        return
+    fi
+
+    ICY_RESPONSE=$(request '{"command":["get_property_string","metadata/by-key/icy-title"]}')
+    ICY_TITLE=$(json_string_data "$ICY_RESPONSE")
+    printf '%s\n' "$ICY_TITLE" \
+        | sed 's#[[:space:]]*https\{0,1\}://[^[:space:]]*[[:space:]]*$##' \
+        | sed 's/ - text="\([^"]*\)"$/ — \1/'
+}
+
 COMMAND=${1:-}
 
 case "$COMMAND" in
     play)
-        [ "$#" -eq 1 ] || usage
+        [ "$#" -le 2 ] || usage
         require_socket
+        STATION=${2:-woodstock}
+        case "$STATION" in
+            woodstock) STREAM_URL=${PI_RADIO_STREAM_URL:-$WOODSTOCK_HLS_URL} ;;
+            *)
+                echo "Unknown station: $STATION" >&2
+                echo "Try: radio stations" >&2
+                exit 1
+                ;;
+        esac
         request "{\"command\":[\"loadfile\",\"$STREAM_URL\",\"replace\"]}" >/dev/null
         ;;
     stop)
@@ -75,22 +122,42 @@ case "$COMMAND" in
         request '{"command":["stop"]}' >/dev/null
         ;;
     volume)
-        [ "$#" -eq 2 ] || usage
-        VOLUME=$2
-        case "$VOLUME" in
-            ''|*[!0-9]*) usage ;;
-        esac
-        [ "$VOLUME" -le 100 ] || usage
         require_socket
-        request "{\"command\":[\"set_property\",\"volume\",$VOLUME]}" >/dev/null
+        [ "$#" -le 2 ] || usage
+        CURRENT_VOLUME=$(get_volume)
+        [ -n "$CURRENT_VOLUME" ] || {
+            echo "Volume is unavailable." >&2
+            exit 1
+        }
+
+        if [ "$#" -eq 2 ]; then
+            case "$2" in
+                up)
+                    VOLUME=$((CURRENT_VOLUME + 5))
+                    [ "$VOLUME" -le 100 ] || VOLUME=100
+                    ;;
+                down)
+                    VOLUME=$((CURRENT_VOLUME - 5))
+                    [ "$VOLUME" -ge 0 ] || VOLUME=0
+                    ;;
+                ''|*[!0-9]*) usage ;;
+                *)
+                    VOLUME=$2
+                    [ "$VOLUME" -le 100 ] || usage
+                    ;;
+            esac
+            request "{\"command\":[\"set_property\",\"volume\",$VOLUME]}" >/dev/null
+            CURRENT_VOLUME=$(get_volume)
+        fi
+
+        echo "volume $CURRENT_VOLUME"
         ;;
     status)
         [ "$#" -eq 1 ] || usage
         require_socket
         IDLE_RESPONSE=$(request '{"command":["get_property","idle-active"]}')
-        VOLUME_RESPONSE=$(request '{"command":["get_property_string","volume"]}')
         COMPACT_IDLE=$(printf '%s' "$IDLE_RESPONSE" | tr -d '[:space:]')
-        VOLUME=$(printf '%s\n' "$VOLUME_RESPONSE" | sed -n 's/.*"data":[[:space:]]*"\([^"]*\)".*/\1/p' | sed 's/\..*$//')
+        VOLUME=$(get_volume)
 
         case "$COMPACT_IDLE" in
             *'"data":true'*) STATE=stopped ;;
@@ -98,27 +165,31 @@ case "$COMMAND" in
             *) STATE=unknown ;;
         esac
 
-        if [ -n "$VOLUME" ]; then
-            echo "$STATE (volume $VOLUME)"
-        else
-            echo "$STATE"
+        OUTPUT=$STATE
+
+        if [ "$STATE" = playing ]; then
+            PATH_RESPONSE=$(request '{"command":["get_property_string","path"]}')
+            STREAM_PATH=$(json_string_data "$PATH_RESPONSE")
+            case "$STREAM_PATH" in
+                "$WOODSTOCK_HLS_URL"|"$WOODSTOCK_DIRECT_URL") STATION_NAME="Radio Woodstock" ;;
+                *) STATION_NAME=custom ;;
+            esac
+
+            TRACK=$(now_playing)
+            [ -n "$TRACK" ] || TRACK="track unavailable"
+            OUTPUT="$OUTPUT | $STATION_NAME | $TRACK"
         fi
+
+        [ -z "$VOLUME" ] || OUTPUT="$OUTPUT | volume $VOLUME"
+        echo "$OUTPUT"
         ;;
-    now)
+    stations)
         [ "$#" -eq 1 ] || usage
-        require_socket
-        METADATA_RESPONSE=$(request '{"command":["get_property_string","metadata/by-key/icy-title"]}')
-        TITLE=$(json_string_data "$METADATA_RESPONSE")
-
-        if [ -z "$TITLE" ]; then
-            echo "No track metadata available." >&2
-            exit 1
-        fi
-
-        TITLE=$(printf '%s\n' "$TITLE" \
-            | sed 's#[[:space:]]*https\{0,1\}://[^[:space:]]*[[:space:]]*$##' \
-            | sed 's/ - text="\([^"]*\)"$/ — \1/')
-        echo "$TITLE"
+        echo "woodstock  Radio Woodstock (default)"
+        ;;
+    help|-h|--help)
+        [ "$#" -eq 1 ] || usage
+        help
         ;;
     *)
         usage

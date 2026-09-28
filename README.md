@@ -32,13 +32,17 @@ The macOS installer runs the player as a user LaunchAgent. It does not need `sud
 
 ```bash
 radio play
-radio volume 40
-radio stop
+radio play woodstock
 radio status
-radio now
+radio volume
+radio volume 40
+radio volume up
+radio volume down
+radio stations
+radio stop
 ```
 
-Volume starts at `50` and accepts `0` through `100`. `radio now` prints the current artist and song when the stream provides them. The player waits silently after boot until `radio play` is called.
+Volume starts at `50` and accepts `0` through `100`. `radio status` shows playback state, station, current song, and volume. The player waits silently after boot until `radio play` is called.
 
 ## Remote control
 
@@ -47,7 +51,7 @@ Use SSH directly or over Tailscale:
 ```bash
 ssh pi@radio radio play
 ssh pi@radio radio volume 35
-ssh pi@radio radio now
+ssh pi@radio radio status
 ssh pi@radio radio stop
 ```
 
