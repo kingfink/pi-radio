@@ -115,6 +115,7 @@ case "$COMMAND" in
                 ;;
         esac
         request "{\"command\":[\"loadfile\",\"$STREAM_URL\",\"replace\"]}" >/dev/null
+        request '{"command":["set_property","pause",false]}' >/dev/null
         ;;
     stop)
         [ "$#" -eq 1 ] || usage
