@@ -1,6 +1,6 @@
 # pi-radio
 
-A tiny CLI for playing Radio Woodstock on a Raspberry Pi, Linux machine, or Mac.
+A tiny CLI for playing Radio Woodstock, WFUV, and WERS on a Raspberry Pi, Linux machine, or Mac.
 
 It uses `mpv` for playback. The first host was a Raspberry Pi because I had one available, but nothing here depends on Pi hardware.
 
@@ -32,7 +32,9 @@ The macOS installer runs the player as a user LaunchAgent. It does not need `sud
 
 ```bash
 radio play
-radio play woodstock
+radio play wdst
+radio play wfuv
+radio play wers
 radio status
 radio volume
 radio volume 40
@@ -43,6 +45,9 @@ radio stop
 ```
 
 Volume starts at `50` and accepts `0` through `100`. `radio status` shows playback state, station, current song, and volume. The player waits silently after boot until `radio play` is called.
+
+`radio play` defaults to Radio Woodstock (WDST 100.1 FM). Use `radio play wdst` or its alias `radio play woodstock`. `radio play wfuv` plays [WFUV's on-air broadcast](https://wfuv.org/options).
+`radio play wers` plays [WERS 88.9 FM](https://wers.org/ways-to-listen/) from Boston.
 
 ## Remote control
 
@@ -79,6 +84,6 @@ sudo raspi-config
 
 On Linux, the service runs as an unprivileged `pi-radio` user and restricts its local control socket to the `pi-radio` group. On macOS, the LaunchAgent and socket run as your user.
 
-This is an unofficial personal project and is not affiliated with Radio Woodstock or iHeart.
+This is an unofficial personal project and is not affiliated with Radio Woodstock, iHeart, WFUV, or WERS.
 
 MIT licensed. See [LICENSE](LICENSE).

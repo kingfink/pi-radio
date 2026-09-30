@@ -4,6 +4,8 @@ set -eu
 
 WOODSTOCK_HLS_URL=https://stream.revma.ihrhls.com/zc7332/hls.m3u8
 WOODSTOCK_DIRECT_URL=https://stream.revma.ihrhls.com/zc7332
+WFUV_URL=https://onair.wfuv.org/onair-hi
+WERS_URL=https://playerservices.streamtheworld.com/api/livestream-redirect/WERSFMAAC.aac
 
 HOST_OS=$(uname -s)
 
@@ -107,7 +109,9 @@ case "$COMMAND" in
         require_socket
         STATION=${2:-woodstock}
         case "$STATION" in
-            woodstock) STREAM_URL=${PI_RADIO_STREAM_URL:-$WOODSTOCK_HLS_URL} ;;
+            wdst|woodstock) STREAM_URL=${PI_RADIO_STREAM_URL:-$WOODSTOCK_HLS_URL} ;;
+            wfuv) STREAM_URL=$WFUV_URL ;;
+            wers) STREAM_URL=$WERS_URL ;;
             *)
                 echo "Unknown station: $STATION" >&2
                 echo "Try: radio stations" >&2
@@ -173,6 +177,8 @@ case "$COMMAND" in
             STREAM_PATH=$(json_string_data "$PATH_RESPONSE")
             case "$STREAM_PATH" in
                 "$WOODSTOCK_HLS_URL"|"$WOODSTOCK_DIRECT_URL") STATION_NAME="Radio Woodstock" ;;
+                "$WFUV_URL") STATION_NAME="WFUV" ;;
+                "$WERS_URL") STATION_NAME="WERS" ;;
                 *) STATION_NAME=custom ;;
             esac
 
@@ -186,7 +192,9 @@ case "$COMMAND" in
         ;;
     stations)
         [ "$#" -eq 1 ] || usage
-        echo "woodstock  Radio Woodstock (default)"
+        echo "wdst       Radio Woodstock 100.1 FM (default; alias: woodstock)"
+        echo "wfuv       WFUV 90.7 FM"
+        echo "wers       WERS 88.9 FM"
         ;;
     help|-h|--help)
         [ "$#" -eq 1 ] || usage
